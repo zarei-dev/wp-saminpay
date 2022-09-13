@@ -19,7 +19,21 @@ class Setup {
         $this->loader = new Loader();
 
         $this->register_admin_hooks();
-        $this->loader->add_action( 'plugins_loaded', $this, 'register_gateway_method', 0);
+
+        if (self::$IS_WC_ACTIVE) {
+            $this->loader->add_action( 'plugins_loaded', $this, 'register_gateway_method', 0);
+        } else {
+            // Show notice if WooCommerce is not installed
+            $this->loader->add_action( 'admin_notices', $this, 'admin_notice__need_woocomerce');
+        }
+    }
+
+    public function admin_notice__need_woocomerce() {
+        ?>
+        <div class="notice notice-error is-dismissible">
+            <p><?php _e( 'You need to install WooCommerce to using SidaPay Gatewayes. If you do not need, please disable the SidaPay plugin.', SIDA_TEXTDOMAIN ); ?></p>
+        </div>
+        <?php
     }
 
     public function register_admin_hooks() {
