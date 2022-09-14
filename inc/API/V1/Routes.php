@@ -11,6 +11,7 @@ class Routes {
     const CHECK_TRANSACTION = '/check_transaction/';
     const SEND_OTP = '/send_otp/';
     const SUBMIT_TRANSACTION = '/submit_transaction/';
+    const CONFIRM_TRANSACTION = '/confirm_transaction/';
 
 	public static function BuildRoute( string $route, array $params = null )
 	{

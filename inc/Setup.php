@@ -26,6 +26,13 @@ class Setup {
             // Show notice if WooCommerce is not installed
             $this->loader->add_action( 'admin_notices', $this, 'admin_notice__need_woocomerce');
         }
+
+        require_once( SIDA_PLUGIN_ROOT . 'inc/API/V1/Routes.php');
+        require_once( SIDA_PLUGIN_ROOT . 'inc/API/Sida_IPG/Routes.php');
+        require_once( SIDA_PLUGIN_ROOT . 'inc/API/V1/Auth.php');
+        require_once( SIDA_PLUGIN_ROOT . 'inc/API/V1/Transaction.php');
+
+
     }
 
     public function admin_notice__need_woocomerce() {
