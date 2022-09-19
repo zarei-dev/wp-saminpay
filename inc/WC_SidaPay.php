@@ -17,7 +17,7 @@ class WC_SidaPay extends \WC_Payment_Gateway {
         $this->id = 'WC_sidapay';
         $this->method_title = __('درگاه پرداخت اعتباری صیدا', 'woocommerce');
         $this->method_description = __('تنظیمات درگاه پرداخت اعتباری صیدا برای افزونه فروشگاه ساز ووکامرس', 'woocommerce');
-        $this->icon = apply_filters('WC_sidapay_logo', WP_PLUGIN_URL . '/' . plugin_basename(__DIR__) . '/assets/images/logo.png');
+        $this->icon = apply_filters('WC_sidapay_logo', SIDA_PLUGIN_ROOT_URL . '/assets/images/logo.png');
         $this->has_fields = false;
 
         $this->init_form_fields();
@@ -140,42 +140,8 @@ class WC_SidaPay extends \WC_Payment_Gateway {
         );
     }
 
-    public function SendRequestToSida( string $username, string $password,$params) {
-        $token = (new \SidaPay\API\V1\Auth( $username, $password))->get_token();
-
-
-    }
-
     public function SendConfirmToSida($login,$params) {
-        try {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL,"https://pay.cpg.ir/api/v1/payment/acknowledge");
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params, JSON_UNESCAPED_SLASHES));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Accept: application/json',
-                'Content-Type: application/json',
-                'Authorization: Basic ' . base64_encode($login[0] . ":" .$login[1])
-                ));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-            curl_setopt($ch, CURLINFO_HEADER_OUT, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
 
-
-            $response = curl_exec($ch);
-            $server_info = curl_getinfo($ch);
-            $error    = curl_errno($ch);
-
-            curl_close($ch);
-
-            $output = $error ? false : json_decode($response);
-            return $output;
-        } catch (\Exception $ex) {
-            return false;
-        }
     }
 
     public function Send_to_Sida_Gateway($order_id) {
@@ -232,15 +198,16 @@ class WC_SidaPay extends \WC_Payment_Gateway {
         $ResNumber = apply_filters('WC_sidapay_ResNumber', $ResNumber, $order_id);
         $Mobile = preg_match('/^09[0-9]{9}/i', $Mobile) ? $Mobile : '';
 
-        $payment_uid = rand(1000,9999999999);
-        update_post_meta( $order_id, 'sidapay_uid', $payment_uid );
-
-
-
         // Redirect to Sida
-        $url = (new Transaction( $this->sidatoken ))->create( $order_id, $Amount);
+        $url = (new Transaction( $this->sidatoken ))->create( $order_id, $Amount, $Mobile );
 
         if ( $url ) {
+            // Add note to order
+            $order->add_order_note(
+                sprintf(
+                    __('کاربر به درگاه پرداخت منتقل شد.', 'woocommerce')
+                )
+            );
             wp_redirect( $url );
             exit;
         } else {
@@ -265,18 +232,23 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 	 * @throws WC_Data_Exception
 	 */
     public function Return_from_Sida_Gateway() {
+        global $woocommerce;
+        error_log( 'Return_from_Sida_Gateway START' );
+        error_log( print_r( $_GET, true ) );
+        error_log( 'Return_from_Sida_Gateway END' );
 
         // early return if not Sida gateway
         if ( !(isset($_GET['status']) && isset($_GET['invoice'] ) ) ) {
             return;
         }
 
-        $order_id = sanitize_text_field( $_GET['invoice'] );
+        $invoice = sanitize_text_field( $_GET['invoice'] );
         $status = sanitize_text_field( $_GET['status'] );
 
         // if status != 2 the payment is not successful
         if ( $status != 2 ) {
-            $order = new WC_Order($order_id);
+            error_log( 'Return_from_Sida_Gateway status != 2' );
+            $order = new \WC_Order($invoice);
             $order->update_status('failed', __('پرداخت ناموفق', 'woocommerce'));
             $order->add_order_note(
                 sprintf(
@@ -284,218 +256,111 @@ class WC_SidaPay extends \WC_Payment_Gateway {
                     $status
                 )
             );
-            wp_redirect($this->get_return_url($order));
+            wp_redirect( wc_get_checkout_url() );
             exit;
         }
 
         // payment is successful
         $username = sanitize_text_field( $_GET['username'] );
+        $invoice = sanitize_text_field( $_GET['invoice'] );
         $tracking_number = sanitize_text_field( $_GET['tracking_number'] );
 
 
         // Confirm the Payment
-        $token = (new Auth($this->sidauser, $this->sidapass))->getToken();
-        $confirm = (new Confirm($token))->confirm_order($tracking_number);
-
-        if ( $confirm ) {
-            // payment is successfully confirmed
-
-            // create coupon with amount of sida payment
-            // where is the amount of payment?
-            $amount = 1000;
-
-            $coupon_id = new Coupon( $amount );
-
-            // add coupon to order
-            $order = new WC_Order($order_id);
-            $order->add_coupon( $coupon_id, $amount );
-
-
+        $token = (new SidaPay\API\V1\Auth($this->sidauser, $this->sidapass))->get_token();
+        error_log( print_r( $this->sidauser, true) );
+        error_log( print_r( $this->sidapass, true) );
+        error_log( print_r( $token, true) );
+        $confirm = (new Transaction($token))->confirm( $tracking_number );
+        error_log( print_r( $confirm, true) );
+        if ( !$confirm || !isset($confirm['status']) ) {
+            error_log( 'Return_from_Sida_Gateway confirm faileddd' );
+            $order = new \WC_Order($invoice);
+            $order->update_status('failed', __('پرداخت ناموفق', 'woocommerce'));
+            $order->add_order_note(
+                sprintf(
+                    __('پرداخت ناموفق بود. کد خطا : %s', 'woocommerce'),
+                    $status
+                )
+            );
+            wp_redirect( wc_get_checkout_url() );
+            exit;
         }
 
+        // payment confirmed
+        $order_id = sanitize_text_field( $confirm['invoice'] );
 
-        // if (isset($_POST['status']) && isset($_POST['grantId']) && isset($_POST['uniqueIdentifier'])) {
-        //     $statusPayment        = sanitize_text_field($_POST['status']);
-        //     $grantId      = sanitize_text_field($_POST['grantId']);
-        //     $InvoiceNumber      = sanitize_text_field($_POST['uniqueIdentifier']);
-        //     global $woocommerce;
-        //     global $wpdb;
-        //     $iuid = intval($InvoiceNumber);
-        //     $results = $wpdb->get_results( "select post_id from $wpdb->postmeta where meta_value = '$iuid' AND meta_key = 'sidapay_uid'", ARRAY_A );
-        //     if (count($results) > 0) {
-        //         $InvoiceNumber = $results[0]['post_id'];
-        //         $order_id = $InvoiceNumber;
-        //     }
-            
-        //     if ($order_id) {
+        if ( !isset($order_id) ) {
+            error_log( 'Return_from_Sida_Gateway order_id not set' );
+            $order = new \WC_Order($invoice);
+            $Fault = __('شماره سفارش وجود ندارد .', 'woocommerce');
+            $Notice = wpautop(wptexturize($this->failedMassage));
+            $Notice = str_replace('{fault}', $Fault, $Notice);
+            $Notice = apply_filters('WC_sidapay_Return_from_Gateway_No_Order_ID_Notice', $Notice, $order_id, $Fault);
+            if ($Notice) {
+                \wc_add_notice($Notice, 'error');
+            }
 
-        //         $order = new \WC_Order($order_id);
-        //         $currency = $order->get_currency();
-        //         $currency = apply_filters('WC_sidapay_Currency', $currency, $order_id);
+            do_action('WC_sidapay_Return_from_Gateway_No_Order_ID', $order_id, '0', $Fault);
 
-        //         if ($order->status !== 'completed') {
+            wp_redirect( wc_get_checkout_url() );
+            exit();
+        }
 
-        //             if ($statusPayment == 'Success') {
+        $order = new \WC_Order($order_id);
 
-        //                 $MerchantID = $this->merchantCode;
-        //                 $Amount = (int)$order->order_total;
-        //                 $Amount = apply_filters('woocommerce_order_amount_total_IRANIAN_gateways_before_check_currency', $Amount, $currency);
-        //                 $strToLowerCurrency = strtolower($currency);
-        //                 if (
-        //                     ($strToLowerCurrency === strtolower('IRT')) ||
-        //                     ($strToLowerCurrency === strtolower('TOMAN')) ||
-        //                     $strToLowerCurrency === strtolower('Iran TOMAN') ||
-        //                     $strToLowerCurrency === strtolower('Iranian TOMAN') ||
-        //                     $strToLowerCurrency === strtolower('Iran-TOMAN') ||
-        //                     $strToLowerCurrency === strtolower('Iranian-TOMAN') ||
-        //                     $strToLowerCurrency === strtolower('Iran_TOMAN') ||
-        //                     $strToLowerCurrency === strtolower('Iranian_TOMAN') ||
-        //                     $strToLowerCurrency === strtolower('تومان') ||
-        //                     $strToLowerCurrency === strtolower('تومان ایران'
-        //                     )
-        //                 ) {
-        //                     $Amount *= 10;
-        //                 } else if (strtolower($currency) === strtolower('IRHT')) {
-        //                     $Amount *= 1000;
-        //                 } else if (strtolower($currency) === strtolower('IRHR')) {
-        //                     $Amount *= 100;
-        //                 } else if (strtolower($currency) === strtolower('IRR')) {
-        //                     $Amount *= 1;
-        //                 }
-        //                 $login=array($this->sidauser , $this->sidapass);
-        //                 $data = array('uniqueIdentifier' => "$iuid");
-        //                 $result = $this->getStatusPayment($login,$data);
-                        
-                        
-                        
-        //                 if ($result->result->status == "1") {
-                            
-        //                 $login=array($this->sidauser , $this->sidapass);    
-        //                 $dataConfirm = array('token' => get_post_meta($order_id,'token_sidapay',true));
-        //                 $resultConfirm = $this->SendConfirmToSida($login,$dataConfirm);    
-                            
-        //                     $Status = 'completed';
-        //                     $Transaction_ID = $result->result->referenceNumber;
-        //                     $Fault = '';
-        //                     $Message = '';  
-                            
-                            
-        //                 } else {
-        //                     $order = wc_get_order($order_id);
-        //                 $order->set_status('cancelled');
-        //                 $order->save();
-        //                 unset($woocommerce->session->order_id_sidapay);
-        //                     $Status = 'failed';
-        //                     $Fault = $result->code;
-        //                     $Message = 'تراکنش ناموفق بود - '.$result->description;
-        //                 }
-        //             } else {
-        //                 // $order = wc_get_order($order_id);
-        //                 // $order->set_status('cancelled');
-        //                 // $order->save();
-        //                 unset($woocommerce->session->order_id_sidapay);
-        //                 $Status = 'failed';
-        //                 $Fault = '';
-        //                 $Message = 'تراکنش انجام نشد .';
-        //             }
+        if ( $confirm['status'] != 2 ) {
+            error_log( 'Return_from_Sida_Gateway confirm->status != 2' );
+            $Note = sprintf(__('خطا در هنگام بازگشت از بانک : %s %s', 'woocommerce'), $Message, $tr_id);
 
-        //             if ($Status === 'completed' && isset($Transaction_ID) && $Transaction_ID !== 0) {
-        //                 update_post_meta($order_id, '_transaction_id', $Transaction_ID);
+            $Note = apply_filters('WC_sidapay_Return_from_Gateway_Failed_Note', $Note, $order_id, $Transaction_ID, $Fault);
+            if ($Note) {
+                $order->add_order_note($Note, 1);
+            }
 
+            $Notice = wpautop(wptexturize($this->failedMassage));
 
-        //                 $order->payment_complete($Transaction_ID);
-        //                 $woocommerce->cart->empty_cart();
+            $Notice = str_replace(array('{transaction_id}', '{fault}'), array($Transaction_ID, $Message), $Notice);
+            $Notice = apply_filters('WC_sidapay_Return_from_Gateway_Failed_Notice', $Notice, $order_id, $Transaction_ID, $Fault);
+            if ($Notice) {
+                wc_add_notice($Notice, 'error');
+            }
 
-        //                 $Note = sprintf(__('پرداخت موفقیت آمیز بود .<br/> کد رهگیری : %s', 'woocommerce'), $Transaction_ID);
-        //                 $Note = apply_filters('WC_sidapay_Return_from_Gateway_Success_Note', $Note, $order_id, $Transaction_ID);
-        //                 if ($Note)
-        //                     $order->add_order_note($Note, 1);
+            do_action('WC_sidapay_Return_from_Gateway_Failed', $order_id, $Transaction_ID, $Fault);
 
+            wp_redirect( wc_get_checkout_url() );
+            exit;
+        }
 
-        //                 $Notice = wpautop(wptexturize($this->successMassage));
+        error_log( 'Return_from_Sida_Gateway SUCCESS' );
 
-        //                 $Notice = str_replace('{transaction_id}', $Transaction_ID, $Notice);
+        \update_post_meta($order_id, '_transaction_id', $tracking_number);
+        $order->payment_complete($tracking_number);
+        $woocommerce->cart->empty_cart();
+        
+        $Note = sprintf(__('پرداخت موفقیت آمیز بود .<br/> کد رهگیری : %s', 'woocommerce'), $tracking_number);
+        $Note = apply_filters('WC_sidapay_Return_from_Gateway_Success_Note', $Note, $order_id, $tracking_number);
+        if ($Note)
+            $order->add_order_note($Note, 1);
 
-        //                 $Notice = apply_filters('WC_sidapay_Return_from_Gateway_Success_Notice', $Notice, $order_id, $Transaction_ID);
-        //                 if ($Notice)
-        //                     wc_add_notice($Notice, 'success');
+        $Notice = wpautop(wptexturize($this->successMassage));
 
-        //                 do_action('WC_sidapay_Return_from_Gateway_Success', $order_id, $Transaction_ID);
+        $Notice = str_replace('{transaction_id}', $Transaction_ID, $Notice);
 
-        //                 wp_redirect(add_query_arg('wc_status', 'success', $this->get_return_url($order)));
-        //                 exit;
-        //             }
+        $Notice = apply_filters('WC_sidapay_Return_from_Gateway_Success_Notice', $Notice, $order_id, $Transaction_ID);
+        if ($Notice)
+            wc_add_notice($Notice, 'success');
 
-        //             if (($Transaction_ID && ($Transaction_ID != 0))) {
-        //                 $tr_id = ('<br/>توکن : ' . $Transaction_ID);
-        //             } else {
-        //                 $tr_id = '';
-        //             }
+        do_action('WC_sidapay_Return_from_Gateway_Success', $order_id, $Transaction_ID);
 
-        //             $Note = sprintf(__('خطا در هنگام بازگشت از بانک : %s %s', 'woocommerce'), $Message, $tr_id);
+        wp_redirect(add_query_arg('wc_status', 'success', $this->get_return_url($order)));
+        exit;
 
-        //             $Note = apply_filters('WC_sidapay_Return_from_Gateway_Failed_Note', $Note, $order_id, $Transaction_ID, $Fault);
-        //             if ($Note) {
-        //                 $order->add_order_note($Note, 1);
-        //             }
-
-        //             $Notice = wpautop(wptexturize($this->failedMassage));
-
-        //             $Notice = str_replace(array('{transaction_id}', '{fault}'), array($Transaction_ID, $Message), $Notice);
-        //             $Notice = apply_filters('WC_sidapay_Return_from_Gateway_Failed_Notice', $Notice, $order_id, $Transaction_ID, $Fault);
-        //             if ($Notice) {
-        //                 wc_add_notice($Notice, 'error');
-        //             }
-
-        //             do_action('WC_sidapay_Return_from_Gateway_Failed', $order_id, $Transaction_ID, $Fault);
-
-        //             wp_redirect($woocommerce->cart->get_checkout_url());
-        //             exit;
-        //         }
-
-        //         $Transaction_ID = get_post_meta($order_id, '_transaction_id', true);
-
-        //         $Notice = wpautop(wptexturize($this->successMassage));
-
-        //         $Notice = str_replace('{transaction_id}', $Transaction_ID, $Notice);
-
-        //         $Notice = apply_filters('WC_sidapay_Return_from_Gateway_ReSuccess_Notice', $Notice, $order_id, $Transaction_ID);
-        //         if ($Notice) {
-        //             wc_add_notice($Notice, 'success');
-        //         }
-
-        //         do_action('WC_sidapay_Return_from_Gateway_ReSuccess', $order_id, $Transaction_ID);
-
-        //         wp_redirect(add_query_arg('wc_status', 'success', $this->get_return_url($order)));
-        //         exit;
-        //     }
-
-        //     $Fault = __('شماره سفارش وجود ندارد .', 'woocommerce');
-        //     $Notice = wpautop(wptexturize($this->failedMassage));
-        //     $Notice = str_replace('{fault}', $Fault, $Notice);
-        //     $Notice = apply_filters('WC_sidapay_Return_from_Gateway_No_Order_ID_Notice', $Notice, $order_id, $Fault);
-        //     if ($Notice) {
-        //         wc_add_notice($Notice, 'error');
-        //     }
-
-        //     do_action('WC_sidapay_Return_from_Gateway_No_Order_ID', $order_id, '0', $Fault);
-
-        //     wp_redirect($woocommerce->cart->get_checkout_url());
-        //     exit;
-        // }
     }
 
-
-	/**
-	 * @param $login
-	 * @param $params
-	 *
-	 * @return bool
-	 */
-    public function getStatusPayment($login,$params) {
-		return true;
+    public function get_return_url($order = null)
+    {
+        return apply_filters('WC_sidapay_Return_URL', $return_url, $order);
     }
-
-
 
 }

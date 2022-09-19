@@ -28,6 +28,7 @@ define( 'SIDA_VERSION', '0.0.2' );
 define( 'SIDA_TEXTDOMAIN', 'wp-sidapay' );
 define( 'SIDA_NAME', 'SidaPay Gateway for woocommerce' );
 define( 'SIDA_PLUGIN_ROOT', plugin_dir_path( __FILE__ ) );
+define( 'SIDA_PLUGIN_ROOT_URL', plugin_dir_url( __FILE__ ) );
 define( 'SIDA_PLUGIN_ABSOLUTE', __FILE__ );
 define( 'SIDA_MIN_PHP_VERSION', '7.0' );
 define( 'SIDA_WP_VERSION', '5.3' );
