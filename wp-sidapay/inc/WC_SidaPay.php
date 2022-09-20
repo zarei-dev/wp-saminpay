@@ -200,6 +200,7 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 
         // Redirect to Sida
         $url = (new Transaction( $this->sidatoken ))->create( $order_id, $Amount, $Mobile );
+
         if ( $url ) {
             // Add note to order
             $order->add_order_note(
@@ -232,18 +233,21 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 	 */
     public function Return_from_Sida_Gateway() {
         global $woocommerce;
+        error_log( 'Return_from_Sida_Gateway START' );
+        error_log( print_r( $_GET, true ) );
+        error_log( 'Return_from_Sida_Gateway END' );
 
         // early return if not Sida gateway
-        if ( !(isset($_GET['status']) && ( isset($_GET['invoice'] ) || isset($_GET['invoice_number'] ) ) ) ) {
+        if ( !(isset($_GET['status']) && isset($_GET['invoice'] ) ) ) {
             return;
         }
 
-        $invoice = isset($_GET['invoice']) ? sanitize_text_field( $_GET['invoice'] ) : sanitize_text_field( $_GET['invoice_number'] );
+        $invoice = sanitize_text_field( $_GET['invoice'] );
         $status = sanitize_text_field( $_GET['status'] );
-        
 
         // if status != 2 the payment is not successful
         if ( $status != 2 ) {
+            error_log( 'Return_from_Sida_Gateway status != 2' );
             $order = new \WC_Order($invoice);
             $order->update_status('failed', __('پرداخت ناموفق', 'woocommerce'));
             $order->add_order_note(
@@ -252,7 +256,7 @@ class WC_SidaPay extends \WC_Payment_Gateway {
                     $status
                 )
             );
-            wp_redirect( $woocommerce->cart->get_checkout_url() );
+            wp_redirect( wc_get_checkout_url() );
             exit;
         }
 
@@ -264,9 +268,13 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 
         // Confirm the Payment
         $token = (new SidaPay\API\V1\Auth($this->sidauser, $this->sidapass))->get_token();
-
+        error_log( print_r( $this->sidauser, true) );
+        error_log( print_r( $this->sidapass, true) );
+        error_log( print_r( $token, true) );
         $confirm = (new Transaction($token))->confirm( $tracking_number );
-        if ( !$confirm || !isset($confirm->transaction_status) || $confirm->status != 200 ) {
+        error_log( print_r( $confirm, true) );
+        if ( !$confirm || !isset($confirm['status']) ) {
+            error_log( 'Return_from_Sida_Gateway confirm faileddd' );
             $order = new \WC_Order($invoice);
             $order->update_status('failed', __('پرداخت ناموفق', 'woocommerce'));
             $order->add_order_note(
@@ -275,14 +283,15 @@ class WC_SidaPay extends \WC_Payment_Gateway {
                     $status
                 )
             );
-            wp_redirect( $woocommerce->cart->get_checkout_url() );
+            wp_redirect( wc_get_checkout_url() );
             exit;
         }
 
         // payment confirmed
-        $order_id = sanitize_text_field( $confirm->invoice );
+        $order_id = sanitize_text_field( $confirm['invoice'] );
 
         if ( !isset($order_id) ) {
+            error_log( 'Return_from_Sida_Gateway order_id not set' );
             $order = new \WC_Order($invoice);
             $Fault = __('شماره سفارش وجود ندارد .', 'woocommerce');
             $Notice = wpautop(wptexturize($this->failedMassage));
@@ -294,33 +303,14 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 
             do_action('WC_sidapay_Return_from_Gateway_No_Order_ID', $order_id, '0', $Fault);
 
-            wp_redirect( $woocommerce->cart->get_checkout_url() );
+            wp_redirect( wc_get_checkout_url() );
             exit();
         }
 
         $order = new \WC_Order($order_id);
-        
-        $sida_amount = (int)$confirm->final_amount;
-        $Amount = (int)$order->get_total();
-        
-        if ( $sida_amount != $Amount) {
-            $Note = 'پرداخت سفارش موفقیت آمیز بود اما بنظر می‌رسد این سفارش ویرایش شده و با مبلغ دیگری پرداخت شده است. لطفا بررسی شود.';
 
-            $Note = apply_filters('WC_sidapay_Return_from_Gateway_Failed_Note', $Note, $order_id, $Transaction_ID, $Fault);
-            if ($Note) {
-                $order->add_order_note($Note, 1);
-            }
-
-            $Notice = wpautop(wptexturize($this->failedMassage));
-            
-            do_action('WC_sidapay_Return_from_Gateway_Failed', $order_id, $Transaction_ID, $Fault);
-
-            wp_redirect( $woocommerce->cart->get_checkout_url() );
-            exit;
-        }
-        
-
-        if ( $confirm->transaction_status != 1 ) {
+        if ( $confirm['status'] != 2 ) {
+            error_log( 'Return_from_Sida_Gateway confirm->status != 2' );
             $Note = sprintf(__('خطا در هنگام بازگشت از بانک : %s %s', 'woocommerce'), $Message, $tr_id);
 
             $Note = apply_filters('WC_sidapay_Return_from_Gateway_Failed_Note', $Note, $order_id, $Transaction_ID, $Fault);
@@ -338,10 +328,11 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 
             do_action('WC_sidapay_Return_from_Gateway_Failed', $order_id, $Transaction_ID, $Fault);
 
-            wp_redirect(  $this->get_return_url($order) );
+            wp_redirect( wc_get_checkout_url() );
             exit;
         }
 
+        error_log( 'Return_from_Sida_Gateway SUCCESS' );
 
         \update_post_meta($order_id, '_transaction_id', $tracking_number);
         $order->payment_complete($tracking_number);
@@ -365,6 +356,11 @@ class WC_SidaPay extends \WC_Payment_Gateway {
         wp_redirect(add_query_arg('wc_status', 'success', $this->get_return_url($order)));
         exit;
 
+    }
+
+    public function get_return_url($order = null)
+    {
+        return apply_filters('WC_sidapay_Return_URL', $return_url, $order);
     }
 
 }

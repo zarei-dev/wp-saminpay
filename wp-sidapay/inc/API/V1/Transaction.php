@@ -46,11 +46,12 @@ class Transaction {
                 'Authorization' => 'Bearer ' . $this->_TOKEN,
             ),
             'body' => json_encode( array(
-                'tracking_number' => $transaction_id,
+                'transaction_id' => $transaction_id,
             ) ),
         );
 
         $response = wp_remote_post( $url, $args );
+        error_log( print_r( $response, true ) );
 
         if ( is_wp_error( $response ) ) {
             $error_message = $response->get_error_message();
