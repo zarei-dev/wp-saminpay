@@ -9,7 +9,7 @@
  * Plugin Name:     SidaPay Gateway for woocommerce
  * Plugin URI:      https://zareidev.ir
  * Description:     SidaPay secure payment gateway plugin for WooCommerce
- * Version:         0.0.1
+ * Version:         1.0.0
  * Author:          Mohammad Zarei
  * Author URI:      https://zareidev.ir
  * Text Domain:     wp-sidapay
