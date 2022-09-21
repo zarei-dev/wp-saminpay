@@ -1,6 +1,6 @@
 <?php
 
-namespace SidaPay;
+namespace SaminPay;
 
 defined( 'ABSPATH' ) || exit;
 

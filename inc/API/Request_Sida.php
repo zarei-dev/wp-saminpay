@@ -1,15 +1,15 @@
 <?php
-namespace SidaPay\API\V1;
+namespace SaminPay\API\V1;
 
 defined( 'ABSPATH' ) || exit;
 
 
-class Request_Sida {
+class Request_Samin {
 
 	private static function get_headers(?string $api_key): array
     {
 
-        $api_key = get_option('sida_api_key');
+        $api_key = get_option('SAMIN_api_key');
 
 		if ($api_key == null) {
 			return [
@@ -41,7 +41,7 @@ class Request_Sida {
     }
 
     /**
-     * Send Get request to Sida
+     * Send Get request to Samin
      *
      * @param string $endpoint
      * @param bool $should_validate

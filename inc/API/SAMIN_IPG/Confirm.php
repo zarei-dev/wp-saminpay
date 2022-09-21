@@ -1,5 +1,5 @@
 <?php
-namespace SidaPay\API\V1;
+namespace SaminPay\API\V1;
 
 defined( 'ABSPATH' ) || exit;
 

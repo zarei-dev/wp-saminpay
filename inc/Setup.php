@@ -1,6 +1,6 @@
 <?php
 
-namespace SidaPay;
+namespace SaminPay;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,10 +27,9 @@ class Setup {
             $this->loader->add_action( 'admin_notices', $this, 'admin_notice__need_woocomerce');
         }
 
-        require_once( SIDA_PLUGIN_ROOT . 'inc/API/V1/Routes.php');
-        require_once( SIDA_PLUGIN_ROOT . 'inc/API/Sida_IPG/Routes.php');
-        require_once( SIDA_PLUGIN_ROOT . 'inc/API/V1/Auth.php');
-        require_once( SIDA_PLUGIN_ROOT . 'inc/API/V1/Transaction.php');
+        require_once( SAMIN_PLUGIN_ROOT . 'inc/API/SAMIN_IPG/Routes.php');
+        require_once( SAMIN_PLUGIN_ROOT . 'inc/API/SAMIN_IPG/Confirm.php');
+        require_once( SAMIN_PLUGIN_ROOT . 'inc/API/SAMIN_IPG/Transaction.php');
 
 
     }
@@ -38,7 +37,7 @@ class Setup {
     public function admin_notice__need_woocomerce() {
         ?>
         <div class="notice notice-error is-dismissible">
-            <p><?php _e( 'You need to install WooCommerce to using SidaPay Gatewayes. If you do not need, please disable the SidaPay plugin.', SIDA_TEXTDOMAIN ); ?></p>
+            <p><?php _e( 'You need to install WooCommerce to using SaminPay Gatewayes. If you do not need, please disable the SaminPay plugin.', SAMIN_TEXTDOMAIN ); ?></p>
         </div>
         <?php
     }
@@ -55,17 +54,17 @@ class Setup {
     }
 
     private function load_dependencies() {
-        require_once ( SIDA_PLUGIN_ROOT . 'inc/Loader.php');
-        require_once ( SIDA_PLUGIN_ROOT . 'inc/Helpers.php');
+        require_once ( SAMIN_PLUGIN_ROOT . 'inc/Loader.php');
+        require_once ( SAMIN_PLUGIN_ROOT . 'inc/Helpers.php');
     }
 
     public function add_gateway_method( $methods ) {
-        $methods[] = 'WC_SidaPay';
+        $methods[] = 'WC_SaminPay';
         return $methods;
     }
 
     public function register_gateway_method() {
-        require_once ( SIDA_PLUGIN_ROOT . 'inc/WC_SidaPay.php');
+        require_once ( SAMIN_PLUGIN_ROOT . 'inc/WC_SaminPay.php');
     }
 
 

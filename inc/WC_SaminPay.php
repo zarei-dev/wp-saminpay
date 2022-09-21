@@ -1,23 +1,23 @@
 <?php
 
-use SidaPay\API\V1\Transaction;
+use SaminPay\API\V1\Transaction;
 
 defined( 'ABSPATH' ) || exit;
 
-class WC_SidaPay extends \WC_Payment_Gateway {
+class WC_SaminPay extends \WC_Payment_Gateway {
 
     private $failedMassage;
     private $successMassage;
-	private $sidauser;
-	private $sidapass;
-    private $sidatoken;
+	private $Saminuser;
+	private $Saminpass;
+    private $Samintoken;
 
 	public function __construct() {
 
-        $this->id = 'WC_sidapay';
+        $this->id = 'WC_SaminPay';
         $this->method_title = __('درگاه پرداخت اعتباری صیدا', 'woocommerce');
         $this->method_description = __('تنظیمات درگاه پرداخت اعتباری صیدا برای افزونه فروشگاه ساز ووکامرس', 'woocommerce');
-        $this->icon = apply_filters('WC_sidapay_logo', SIDA_PLUGIN_ROOT_URL . '/assets/images/logo.png');
+        $this->icon = apply_filters('WC_SaminPay_logo', SAMIN_PLUGIN_ROOT_URL . '/assets/images/logo.png');
         $this->has_fields = false;
 
         $this->init_form_fields();
@@ -26,9 +26,9 @@ class WC_SidaPay extends \WC_Payment_Gateway {
         $this->title = $this->settings['title'];
         $this->description = $this->settings['description'];
 
-        $this->sidauser = $this->settings['sidauser'];
-        $this->sidapass = $this->settings['sidapass'];
-        $this->sidatoken = $this->settings['sidatoken'];
+        $this->Saminuser = $this->settings['Saminuser'];
+        $this->Saminpass = $this->settings['Saminpass'];
+        $this->Samintoken = $this->settings['Samintoken'];
         
         $this->successMassage = $this->settings['success_massage'];
         $this->failedMassage = $this->settings['failed_massage'];
@@ -39,8 +39,8 @@ class WC_SidaPay extends \WC_Payment_Gateway {
             add_action('woocommerce_update_options_payment_gateways', array($this, 'process_admin_options'));
         }
 
-        add_action( 'woocommerce_receipt_' . $this->id, array($this, 'Send_to_Sida_Gateway'));
-        add_action( 'woocommerce_api_' . strtolower(get_class($this)), array($this, 'Return_from_Sida_Gateway'));
+        add_action( 'woocommerce_receipt_' . $this->id, array($this, 'Send_to_SAMIN_Gateway'));
+        add_action( 'woocommerce_api_' . strtolower(get_class($this)), array($this, 'Return_from_SAMIN_Gateway'));
 
 
     }
@@ -50,11 +50,11 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 	 *
 	 * Add an array of fields to be displayed on the gateway's settings screen.
 	 *
-	 *  fields can override with WC_sidapay_Config filter
+	 *  fields can override with WC_SaminPay_Config filter
 	 * @return void
 	 */
     public function init_form_fields() {
-        $this->form_fields = apply_filters('WC_sidapay_Config', array(
+        $this->form_fields = apply_filters('WC_SaminPay_Config', array(
                 'base_config' => array(
                     'title' => __('تنظیمات درگاه', 'woocommerce'),
                     'type' => 'title',
@@ -79,7 +79,7 @@ class WC_SidaPay extends \WC_Payment_Gateway {
                     'type' => 'title',
                     'description' => '',
                 ),
-                'sidatoken' => array(
+                'Samintoken' => array(
                     'title' => __('توکن درگاه', 'woocommerce'),
                     'type' => 'text',
                     'label' => __('توکن درگاه', 'woocommerce'),
@@ -87,7 +87,7 @@ class WC_SidaPay extends \WC_Payment_Gateway {
                     'default' => '',
                     'desc_tip' => true,
                 ),
-                'sidauser' => array(
+                'Saminuser' => array(
                     'title' => __('نام کاربری درگاه', 'woocommerce'),
                     'type' => 'text',
                     'label' => __('نام کاربری درگاه', 'woocommerce'),
@@ -95,7 +95,7 @@ class WC_SidaPay extends \WC_Payment_Gateway {
                     'default' => '',
                     'desc_tip' => true,
                 ),
-                'sidapass' => array(
+                'Saminpass' => array(
                     'title' => __('رمز عبور درگاه', 'woocommerce'),
                     'type' => 'password',
                     'label' => __('رمز عبور درگاه', 'woocommerce'),
@@ -140,24 +140,24 @@ class WC_SidaPay extends \WC_Payment_Gateway {
         );
     }
 
-    public function SendConfirmToSida($login,$params) {
+    public function SendConfirmToSamin($login,$params) {
 
     }
 
-    public function Send_to_Sida_Gateway($order_id) {
+    public function Send_to_SAMIN_Gateway($order_id) {
         global $woocommerce;
-        $woocommerce->session->order_id_sidapay = $order_id;
+        $woocommerce->session->order_id_SaminPay = $order_id;
         $order = \wc_get_order( $order_id );
         $currency = $order->get_currency();
-        $currency = apply_filters('WC_sidapay_Currency', $currency, $order_id);
+        $currency = apply_filters('WC_SaminPay_Currency', $currency, $order_id);
 
 
         $form = '';
-        $form = apply_filters('WC_sidapay_Form', $form, $order_id, $woocommerce);
+        $form = apply_filters('WC_SaminPay_Form', $form, $order_id, $woocommerce);
 
-        do_action('WC_sidapay_Gateway_Before_Form', $order_id, $woocommerce);
+        do_action('WC_SaminPay_Gateway_Before_Form', $order_id, $woocommerce);
         echo $form;
-        do_action('WC_sidapay_Gateway_After_Form', $order_id, $woocommerce);
+        do_action('WC_SaminPay_Gateway_After_Form', $order_id, $woocommerce);
 
 
         $Amount = (int)$order->get_total();
@@ -188,19 +188,18 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 
         $Amount = apply_filters('woocommerce_order_amount_total_IRANIAN_gateways_after_check_currency', $Amount, $currency);
         $Amount = apply_filters('woocommerce_order_amount_total_IRANIAN_gateways_irt', $Amount, $currency);
-        $Amount = apply_filters('woocommerce_order_amount_total_Sida_gateway', $Amount, $currency);
+        $Amount = apply_filters('woocommerce_order_amount_total_SAMIN_gateway', $Amount, $currency);
 
         $Mobile = get_post_meta($order_id, '_billing_phone', true) ?: '-';
         $ResNumber = (int)$order->get_order_number();
         
         //Hooks for iranian developer
-        $Mobile = apply_filters('WC_sidapay_Mobile', $Mobile, $order_id);
-        $ResNumber = apply_filters('WC_sidapay_ResNumber', $ResNumber, $order_id);
+        $Mobile = apply_filters('WC_SaminPay_Mobile', $Mobile, $order_id);
+        $ResNumber = apply_filters('WC_SaminPay_ResNumber', $ResNumber, $order_id);
         $Mobile = preg_match('/^09[0-9]{9}/i', $Mobile) ? $Mobile : '';
 
-        // Redirect to Sida
-        $url = (new Transaction( $this->sidatoken ))->create( $order_id, $Amount, $Mobile );
-
+        // Redirect to Samin
+        $url = (new Transaction( $this->Samintoken ))->create( $order_id, $Amount, $Mobile );
         if ( $url ) {
             // Add note to order
             $order->add_order_note(
@@ -218,7 +217,7 @@ class WC_SidaPay extends \WC_Payment_Gateway {
             );
             $order->update_status('failed');
             wp_redirect( wc_get_checkout_url() );
-            do_action('WC_sidapay_Send_to_Gateway_Failed', $order_id);
+            do_action('WC_SaminPay_Send_to_Gateway_Failed', $order_id);
             exit;
         }
 
@@ -227,27 +226,24 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 
 
 	/**
-	 * Payment callback : https://example.com/wc-api/wc_sidapay/
+	 * Payment callback : https://example.com/wc-api/wc_SaminPay/
 	 * @return void
 	 * @throws WC_Data_Exception
 	 */
-    public function Return_from_Sida_Gateway() {
+    public function Return_from_SAMIN_Gateway() {
         global $woocommerce;
-        error_log( 'Return_from_Sida_Gateway START' );
-        error_log( print_r( $_GET, true ) );
-        error_log( 'Return_from_Sida_Gateway END' );
 
-        // early return if not Sida gateway
-        if ( !(isset($_GET['status']) && isset($_GET['invoice'] ) ) ) {
+        // early return if not Samin gateway
+        if ( !(isset($_GET['status']) && ( isset($_GET['invoice'] ) || isset($_GET['invoice_number'] ) ) ) ) {
             return;
         }
 
-        $invoice = sanitize_text_field( $_GET['invoice'] );
+        $invoice = isset($_GET['invoice']) ? sanitize_text_field( $_GET['invoice'] ) : sanitize_text_field( $_GET['invoice_number'] );
         $status = sanitize_text_field( $_GET['status'] );
+        
 
         // if status != 2 the payment is not successful
         if ( $status != 2 ) {
-            error_log( 'Return_from_Sida_Gateway status != 2' );
             $order = new \WC_Order($invoice);
             $order->update_status('failed', __('پرداخت ناموفق', 'woocommerce'));
             $order->add_order_note(
@@ -256,7 +252,7 @@ class WC_SidaPay extends \WC_Payment_Gateway {
                     $status
                 )
             );
-            wp_redirect( wc_get_checkout_url() );
+            wp_redirect( $woocommerce->cart->get_checkout_url() );
             exit;
         }
 
@@ -264,17 +260,14 @@ class WC_SidaPay extends \WC_Payment_Gateway {
         $username = sanitize_text_field( $_GET['username'] );
         $invoice = sanitize_text_field( $_GET['invoice'] );
         $tracking_number = sanitize_text_field( $_GET['tracking_number'] );
+        $Transaction_ID = sanitize_text_field( $_GET['tracking_number'] );
 
 
         // Confirm the Payment
-        $token = (new SidaPay\API\V1\Auth($this->sidauser, $this->sidapass))->get_token();
-        error_log( print_r( $this->sidauser, true) );
-        error_log( print_r( $this->sidapass, true) );
-        error_log( print_r( $token, true) );
+        $token = (new SaminPay\API\V1\Auth($this->Saminuser, $this->Saminpass))->get_token();
+
         $confirm = (new Transaction($token))->confirm( $tracking_number );
-        error_log( print_r( $confirm, true) );
-        if ( !$confirm || !isset($confirm['status']) ) {
-            error_log( 'Return_from_Sida_Gateway confirm faileddd' );
+        if ( !$confirm || !isset($confirm->transaction_status) || $confirm->status != 200 ) {
             $order = new \WC_Order($invoice);
             $order->update_status('failed', __('پرداخت ناموفق', 'woocommerce'));
             $order->add_order_note(
@@ -283,37 +276,55 @@ class WC_SidaPay extends \WC_Payment_Gateway {
                     $status
                 )
             );
-            wp_redirect( wc_get_checkout_url() );
+            wp_redirect( $woocommerce->cart->get_checkout_url() );
             exit;
         }
 
         // payment confirmed
-        $order_id = sanitize_text_field( $confirm['invoice'] );
+        $order_id = sanitize_text_field( $confirm->invoice );
 
         if ( !isset($order_id) ) {
-            error_log( 'Return_from_Sida_Gateway order_id not set' );
             $order = new \WC_Order($invoice);
             $Fault = __('شماره سفارش وجود ندارد .', 'woocommerce');
             $Notice = wpautop(wptexturize($this->failedMassage));
             $Notice = str_replace('{fault}', $Fault, $Notice);
-            $Notice = apply_filters('WC_sidapay_Return_from_Gateway_No_Order_ID_Notice', $Notice, $order_id, $Fault);
+            $Notice = apply_filters('WC_SaminPay_Return_from_Gateway_No_Order_ID_Notice', $Notice, $order_id, $Fault);
             if ($Notice) {
                 \wc_add_notice($Notice, 'error');
             }
 
-            do_action('WC_sidapay_Return_from_Gateway_No_Order_ID', $order_id, '0', $Fault);
+            do_action('WC_SaminPay_Return_from_Gateway_No_Order_ID', $order_id, '0', $Fault);
 
-            wp_redirect( wc_get_checkout_url() );
+            wp_redirect( $woocommerce->cart->get_checkout_url() );
             exit();
         }
 
         $order = new \WC_Order($order_id);
+        
+        $SAMIN_amount = (int)$confirm->final_amount;
+        $Amount = (int)$order->get_total();
+        
+        if ( $SAMIN_amount != $Amount) {
+            $Note = 'پرداخت سفارش موفقیت آمیز بود اما بنظر می‌رسد این سفارش ویرایش شده و با مبلغ دیگری پرداخت شده است. لطفا بررسی شود.';
 
-        if ( $confirm['status'] != 2 ) {
-            error_log( 'Return_from_Sida_Gateway confirm->status != 2' );
+            $Note = apply_filters('WC_SaminPay_Return_from_Gateway_Failed_Note', $Note, $order_id, $Transaction_ID, $Fault);
+            if ($Note) {
+                $order->add_order_note($Note, 1);
+            }
+
+            $Notice = wpautop(wptexturize($this->failedMassage));
+            
+            do_action('WC_SaminPay_Return_from_Gateway_Failed', $order_id, $Transaction_ID, $Fault);
+
+            wp_redirect( $woocommerce->cart->get_checkout_url() );
+            exit;
+        }
+        
+
+        if ( $confirm->transaction_status != 1 ) {
             $Note = sprintf(__('خطا در هنگام بازگشت از بانک : %s %s', 'woocommerce'), $Message, $tr_id);
 
-            $Note = apply_filters('WC_sidapay_Return_from_Gateway_Failed_Note', $Note, $order_id, $Transaction_ID, $Fault);
+            $Note = apply_filters('WC_SaminPay_Return_from_Gateway_Failed_Note', $Note, $order_id, $Transaction_ID, $Fault);
             if ($Note) {
                 $order->add_order_note($Note, 1);
             }
@@ -321,25 +332,24 @@ class WC_SidaPay extends \WC_Payment_Gateway {
             $Notice = wpautop(wptexturize($this->failedMassage));
 
             $Notice = str_replace(array('{transaction_id}', '{fault}'), array($Transaction_ID, $Message), $Notice);
-            $Notice = apply_filters('WC_sidapay_Return_from_Gateway_Failed_Notice', $Notice, $order_id, $Transaction_ID, $Fault);
+            $Notice = apply_filters('WC_SaminPay_Return_from_Gateway_Failed_Notice', $Notice, $order_id, $Transaction_ID, $Fault);
             if ($Notice) {
                 wc_add_notice($Notice, 'error');
             }
 
-            do_action('WC_sidapay_Return_from_Gateway_Failed', $order_id, $Transaction_ID, $Fault);
+            do_action('WC_SaminPay_Return_from_Gateway_Failed', $order_id, $Transaction_ID, $Fault);
 
-            wp_redirect( wc_get_checkout_url() );
+            wp_redirect(  $this->get_return_url($order) );
             exit;
         }
 
-        error_log( 'Return_from_Sida_Gateway SUCCESS' );
 
         \update_post_meta($order_id, '_transaction_id', $tracking_number);
         $order->payment_complete($tracking_number);
         $woocommerce->cart->empty_cart();
         
         $Note = sprintf(__('پرداخت موفقیت آمیز بود .<br/> کد رهگیری : %s', 'woocommerce'), $tracking_number);
-        $Note = apply_filters('WC_sidapay_Return_from_Gateway_Success_Note', $Note, $order_id, $tracking_number);
+        $Note = apply_filters('WC_SaminPay_Return_from_Gateway_Success_Note', $Note, $order_id, $tracking_number);
         if ($Note)
             $order->add_order_note($Note, 1);
 
@@ -347,20 +357,15 @@ class WC_SidaPay extends \WC_Payment_Gateway {
 
         $Notice = str_replace('{transaction_id}', $Transaction_ID, $Notice);
 
-        $Notice = apply_filters('WC_sidapay_Return_from_Gateway_Success_Notice', $Notice, $order_id, $Transaction_ID);
+        $Notice = apply_filters('WC_SaminPay_Return_from_Gateway_Success_Notice', $Notice, $order_id, $Transaction_ID);
         if ($Notice)
             wc_add_notice($Notice, 'success');
 
-        do_action('WC_sidapay_Return_from_Gateway_Success', $order_id, $Transaction_ID);
+        do_action('WC_SaminPay_Return_from_Gateway_Success', $order_id, $Transaction_ID);
 
         wp_redirect(add_query_arg('wc_status', 'success', $this->get_return_url($order)));
         exit;
 
-    }
-
-    public function get_return_url($order = null)
-    {
-        return apply_filters('WC_sidapay_Return_URL', $return_url, $order);
     }
 
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace SidaPay;
+namespace SaminPay;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -31,7 +31,7 @@ class Coupon {
 
 
 	/**
-	 * Generate Coupon started with SIDA- and 6 random characters
+	 * Generate Coupon started with Samin- and 6 random characters
 	 * @return string
 	 */
     public function generate_coupon_code(): string
@@ -42,7 +42,7 @@ class Coupon {
         for ( $i = 0; $i < 6; $i++ ) {
             $randomString .= $characters[rand( 0, $charactersLength - 1 )];
         }
-        return 'SIDA-' . $randomString;
+        return 'Samin-' . $randomString;
     }
 
 

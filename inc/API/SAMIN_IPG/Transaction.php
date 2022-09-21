@@ -1,7 +1,7 @@
 <?php
-namespace SidaPay\API\V1;
+namespace SaminPay\API\V1;
 
-use SidaPay\API\Sida_IPG\Routes as Sida_IPG_Routes;
+use SaminPay\API\SAMIN_IPG\Routes as SAMIN_IPG_Routes;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -20,7 +20,7 @@ class Transaction {
         }
 
 
-        $url = Sida_IPG_Routes::BASE_URL . Sida_IPG_Routes::BuildRoute( Sida_IPG_Routes::CREATE_TRANSACTION, array(
+        $url = SAMIN_IPG_Routes::BASE_URL . SAMIN_IPG_Routes::BuildRoute( SAMIN_IPG_Routes::CREATE_TRANSACTION, array(
             'national_id' => $client,
             'total_price_amount' => $amount,
             'ipg-token' => $this->_TOKEN,
